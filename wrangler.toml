@@ -5,7 +5,7 @@ compatibility_date = "2025-05-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "expense-tracker-db"
-database_id = ""
+database_id = "605f91fe-4aa9-4dd1-a003-d40c0a0058b9"
 
 [vars]
 SYNC_KEY_SALT = "expense-tracker-v1"
