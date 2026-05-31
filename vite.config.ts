@@ -49,7 +49,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/offline.html',
+        navigateFallback: '/',
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
       },
     }),
