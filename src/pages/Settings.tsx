@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import {
   Download, Upload, Trash2, Settings as SettingsIcon, Moon, Sun,
-  FileText, Bell, DollarSign,
+  FileText, Bell, DollarSign, KeyRound, Check,
 } from 'lucide-react'
 import { api } from '../utils/api'
 import type { ExchangeRate } from '../types'
+import { getSyncKey, setSyncKey } from '../utils/syncKey'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -33,6 +34,9 @@ export function Settings() {
   const [rateForm, setRateForm] = useState({ fromCurrency: 'USD', toCurrency: 'EUR', rate: '' })
 
   const [notifPerm, setNotifPerm] = useState(() => typeof Notification !== 'undefined' ? Notification.permission : 'denied')
+  const [syncKey, setSyncKeyState] = useState(getSyncKey())
+  const [syncKeyInput, setSyncKeyInput] = useState('')
+  const [syncCopied, setSyncCopied] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('defaultCurrency', defaultCurrency)
@@ -224,6 +228,22 @@ export function Settings() {
     setRates(r)
   }
 
+  const changeSyncKey = () => {
+    if (syncKeyInput.length < 10) return
+    setSyncKey(syncKeyInput.trim())
+    setSyncKeyState(syncKeyInput.trim())
+    setSyncKeyInput('')
+    setMessage('Sync key updated! Refresh to load data from other device.')
+    setTimeout(() => setMessage(''), 3000)
+  }
+
+  const copySyncKey = async () => {
+    await navigator.clipboard.writeText(syncKey)
+    setSyncCopied(true)
+    setTimeout(() => setSyncCopied(false), 2000)
+    haptic(10)
+  }
+
   const openCsv = () => { loadAccounts(); setCsvData(''); setCsvModal(true) }
   const accountOptions = csvAccounts.map(a => ({ value: String(a.id), label: a.name }))
 
@@ -242,6 +262,30 @@ export function Settings() {
           <Button size="sm" variant="secondary" onClick={toggleDark}>
             {isDark ? <Sun size={16} /> : <Moon size={16} />} {isDark ? 'Light Mode' : 'Dark Mode'}
           </Button>
+        </div>
+
+        <div className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-1">
+                <KeyRound size={16} /> Sync Key
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Share this key with other devices to sync data</p>
+            </div>
+            <button onClick={copySyncKey} className="text-purple-600 dark:text-purple-400 hover:text-purple-700 flex items-center gap-1 text-sm">
+              {syncCopied ? <><Check size={14} /> Copied</> : 'Copy'}
+            </button>
+          </div>
+          <div className="font-mono text-xs bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 break-all select-all">
+            {syncKey}
+          </div>
+          <details className="text-sm">
+            <summary className="text-purple-600 dark:text-purple-400 cursor-pointer">Use a different key</summary>
+            <div className="flex gap-2 mt-2">
+              <Input value={syncKeyInput} onChange={e => setSyncKeyInput(e.target.value)} placeholder="Paste sync key from other device" />
+              <Button size="sm" onClick={changeSyncKey} disabled={syncKeyInput.length < 10}>Update</Button>
+            </div>
+          </details>
         </div>
 
         <div className="p-4">
