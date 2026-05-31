@@ -4,6 +4,7 @@ import {
   FileText, Bell, DollarSign,
 } from 'lucide-react'
 import { api } from '../utils/api'
+import type { ExchangeRate } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
