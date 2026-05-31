@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Account } from '../types'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -22,7 +22,7 @@ export function Transfers() {
 
   useEffect(() => {
     (async () => {
-      const allAccs = await db.accounts.toArray()
+      const allAccs = await api.list('accounts')
       const accs = allAccs.filter(a => a.isActive)
       setAccounts(accs)
       if (accs.length >= 2) {
@@ -39,19 +39,18 @@ export function Transfers() {
     if (!fromAccount || !toAccount || !numericAmount || fromAccount === toAccount) return
 
     setSaving(true)
-    const now = new Date()
     const transferId = Date.now()
 
-    await db.transactions.add({
+    await api.create('transactions', {
       date, amount: -numericAmount, description: description || 'Transfer',
       type: 'transfer', accountId: Number(fromAccount), tagIds: [],
-      notes: '', transferId, isReconciled: false, createdAt: now, updatedAt: now,
+      notes: '', transferId, isReconciled: false,
     })
 
-    await db.transactions.add({
+    await api.create('transactions', {
       date, amount: numericAmount, description: description || 'Transfer',
       type: 'transfer', accountId: Number(toAccount), tagIds: [],
-      notes: '', transferId, isReconciled: false, createdAt: now, updatedAt: now,
+      notes: '', transferId, isReconciled: false,
     })
 
     setSaving(false)

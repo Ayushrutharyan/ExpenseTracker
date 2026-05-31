@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { RecurringTransaction, Transaction } from '../types'
 
 function computeNextDate(current: string, frequency: RecurringTransaction['frequency'], interval: number): string {
@@ -17,9 +17,8 @@ export async function processRecurringTransactions(): Promise<number> {
   const now = new Date()
   const today = now.toISOString().slice(0, 10)
 
-  const due = await db.recurringTransactions
-    .filter(r => r.isActive && r.nextDate <= today && (!r.endDate || r.endDate >= today))
-    .toArray()
+  const all = await api.list('recurringTransactions')
+  const due = all.filter(r => r.isActive && r.nextDate <= today && (!r.endDate || r.endDate >= today))
 
   let created = 0
   for (const r of due) {
@@ -34,11 +33,11 @@ export async function processRecurringTransactions(): Promise<number> {
       isReconciled: false,
       recurringId: r.id,
     }
-    await db.transactions.add({ ...tx, createdAt: new Date(), updatedAt: new Date() })
+    await api.create('transactions', tx)
     created++
 
     const next = computeNextDate(r.nextDate, r.frequency, r.interval)
-    await db.recurringTransactions.update(r.id!, { nextDate: next, updatedAt: new Date() })
+    await api.update('recurringTransactions', r.id!, { nextDate: next })
   }
   return created
 }
@@ -48,7 +47,7 @@ export function useRecurringTransactions() {
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
-    const data = await db.recurringTransactions.orderBy('nextDate').toArray()
+    const data = await api.list('recurringTransactions', 'nextDate')
     setItems(data)
     setLoading(false)
   }
@@ -56,19 +55,18 @@ export function useRecurringTransactions() {
   useEffect(() => { load() }, [])
 
   const create = async (r: Omit<RecurringTransaction, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const now = new Date()
-    const id = await db.recurringTransactions.add({ ...r, createdAt: now, updatedAt: now } as RecurringTransaction)
+    const result = await api.create('recurringTransactions', r)
     await load()
-    return id
+    return result
   }
 
   const update = async (id: number, data: Partial<RecurringTransaction>) => {
-    await db.recurringTransactions.update(id, { ...data, updatedAt: new Date() })
+    await api.update('recurringTransactions', id, data)
     await load()
   }
 
   const remove = async (id: number) => {
-    await db.recurringTransactions.delete(id)
+    await api.remove('recurringTransactions', id)
     await load()
   }
 

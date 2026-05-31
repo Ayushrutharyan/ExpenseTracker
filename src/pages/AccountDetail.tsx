@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Trash2 } from 'lucide-react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Account, Transaction, Tag } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -29,14 +29,12 @@ export function AccountDetail() {
 
   const load = async () => {
     if (!id) return
-    const acc = await db.accounts.get(Number(id))
+    const acc = await api.get('accounts', Number(id))
     setAccount(acc ?? null)
-    const tgs = await db.tags.toArray()
+    const tgs = await api.list('tags')
     setTags(tgs)
     if (acc) {
-      const txs = await db.transactions
-        .where('accountId').equals(acc.id!)
-        .reverse().sortBy('date')
+      const txs = await api.query('transactions', {accountId: acc.id!}, 'date', 'desc')
       setTransactions(txs)
       setBalance(txs.reduce((s, t) => s + t.amount, 0))
     }
@@ -45,15 +43,13 @@ export function AccountDetail() {
   useEffect(() => { load() }, [id])
 
   const removeTx = async (txId: number) => {
-    const tx = await db.transactions.get(txId)
+    const tx = await api.get('transactions', txId)
     if (tx?.transferId) {
-      const pair = await db.transactions
-        .where('transferId').equals(tx.transferId)
-        .and(t => t.id !== txId)
-        .first()
-      if (pair) await db.transactions.delete(pair.id!)
+      const all = await api.query('transactions', {transferId: tx.transferId})
+      const pair = all.find(t => t.id !== txId)
+      if (pair) await api.remove('transactions', pair.id!)
     }
-    await db.transactions.delete(txId)
+    await api.remove('transactions', txId)
     haptic(15)
     await load()
   }

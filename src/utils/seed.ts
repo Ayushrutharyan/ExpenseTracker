@@ -1,4 +1,4 @@
-import { db } from '../db/db'
+import { api } from '../utils/api'
 
 const ACCOUNTS = [
   { name: 'Axis', type: 'savings' as const, color: '#e11d48', currency: 'INR' },
@@ -20,15 +20,14 @@ const TAGS = [
 ]
 
 export async function seedDemoData() {
-  const count = await db.accounts.count()
+  const count = await api.count('accounts')
   if (count > 0) return
 
-  const now = new Date()
   for (const acc of ACCOUNTS) {
-    await db.accounts.add({ ...acc, icon: '', isActive: true, createdAt: now, updatedAt: now })
+    await api.create('accounts', { ...acc, icon: '', isActive: true })
   }
 
   for (const tag of TAGS) {
-    await db.tags.add({ ...tag, icon: '', createdAt: now })
+    await api.create('tags', { ...tag, icon: '' })
   }
 }

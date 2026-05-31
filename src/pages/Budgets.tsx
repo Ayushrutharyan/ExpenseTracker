@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, PiggyBank, ChevronRight as ChevronRightIcon, ChevronDown } from 'lucide-react'
 import { format, addMonths, subMonths } from 'date-fns'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Budget, Tag } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -21,10 +21,10 @@ export function Budgets() {
   const getChildren = (id: number) => tags.filter(t => t.parentId === id)
 
   const load = async () => {
-    const tgs = await db.tags.toArray()
+    const tgs = await api.list('tags')
     setTags(tgs)
 
-    const bgs = await db.budgets.where('month').equals(month).toArray()
+    const bgs = await api.query('budgets', {month})
     setBudgets(bgs)
 
     const spent: Record<number, number> = {}
@@ -33,8 +33,7 @@ export function Budgets() {
     const endDate = new Date(year, mon, 0)
     const end = `${month}-${String(endDate.getDate()).padStart(2, '0')}`
 
-    const txs = await db.transactions
-      .where('date').between(start, end, true, true).toArray()
+    const txs = await api.between('transactions', 'date', start, end)
 
     for (const tag of tgs) {
       spent[tag.id!] = txs
@@ -55,12 +54,12 @@ export function Budgets() {
   const saveBudget = async (tagId: number) => {
     const amount = parseFloat(editAmount[tagId] || '0')
     if (amount <= 0) return
-    const existing = await db.budgets.where({ tagId, month }).first()
-    const now = new Date()
+    const all = await api.query('budgets', {tagId, month})
+    const existing = all[0]
     if (existing) {
-      await db.budgets.update(existing.id!, { amount, updatedAt: now })
+      await api.update('budgets', existing.id!, { amount })
     } else {
-      await db.budgets.add({ tagId, month, amount, createdAt: now, updatedAt: now } as Budget)
+      await api.create('budgets', { tagId, month, amount })
     }
     await load()
   }

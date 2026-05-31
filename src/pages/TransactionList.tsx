@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ArrowUpRight, ArrowDownLeft, Trash2, Search, CheckSquare, Square, Tags } from 'lucide-react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Transaction, Account, Tag } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -40,9 +40,9 @@ export function TransactionList() {
 
   const load = async () => {
     const [txs, accs, tgs] = await Promise.all([
-      db.transactions.orderBy('date').reverse().toArray(),
-      db.accounts.toArray(),
-      db.tags.toArray(),
+      api.list('transactions', 'date', 'desc'),
+      api.list('accounts'),
+      api.list('tags'),
     ])
     setTransactions(txs)
     setAccounts(accs)
@@ -52,15 +52,13 @@ export function TransactionList() {
   useEffect(() => { load() }, [])
 
   const remove = async (id: number) => {
-    const tx = await db.transactions.get(id)
+    const tx = await api.get('transactions', id)
     if (tx?.transferId) {
-      const pair = await db.transactions
-        .where('transferId').equals(tx.transferId)
-        .and(t => t.id !== id)
-        .first()
-      if (pair) await db.transactions.delete(pair.id!)
+      const all = await api.query('transactions', {transferId: tx.transferId})
+      const pair = all.find(t => t.id !== id)
+      if (pair) await api.remove('transactions', pair.id!)
     }
-    await db.transactions.delete(id)
+    await api.remove('transactions', id)
     haptic(15)
     await load()
   }
@@ -85,7 +83,7 @@ export function TransactionList() {
   const bulkDelete = async () => {
     if (!confirm(`Delete ${selectedIds.size} transactions?`)) return
     for (const id of selectedIds) {
-      await db.transactions.delete(id)
+      await api.remove('transactions', id)
     }
     setSelectedIds(new Set())
     setSelectMode(false)
@@ -99,12 +97,12 @@ export function TransactionList() {
     if (bulkAccountId) updates.accountId = Number(bulkAccountId)
     if (Object.keys(updates).length === 0) return
     for (const id of selectedIds) {
-      const tx = await db.transactions.get(id)
+      const tx = await api.get('transactions', id)
       if (!tx) continue
       let newTags = tx.tagIds
       if (bulkTagId) newTags = tx.tagIds.includes(Number(bulkTagId))
         ? tx.tagIds : [...tx.tagIds, Number(bulkTagId)]
-      await db.transactions.update(id, { ...updates, tagIds: newTags, updatedAt: new Date() })
+      await api.update('transactions', id, { ...updates, tagIds: newTags })
     }
     setBulkModal(false)
     setSelectedIds(new Set())

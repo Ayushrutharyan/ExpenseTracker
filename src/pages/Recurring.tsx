@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, RefreshCw, Calendar } from 'lucide-react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Account, Tag, RecurringTransaction } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -34,7 +34,7 @@ export function RecurringPage() {
 
   useEffect(() => {
     (async () => {
-      const [accs, tgs] = await Promise.all([db.accounts.toArray(), db.tags.toArray()])
+      const [accs, tgs] = await Promise.all([api.list('accounts'), api.list('tags')])
       setAccounts(accs.filter(a => a.isActive))
       setTags(tgs)
     })()

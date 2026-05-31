@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Pencil, Trash2, Wallet, ChevronDown, ChevronRight } from 'lucide-react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Account } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -39,11 +39,11 @@ export function Accounts() {
   const [form, setForm] = useState({ name: '', type: 'wallets' as Account['type'], color: '#3b82f6', icon: '', currency: 'USD', isActive: true })
 
   const load = async () => {
-    const accs = await db.accounts.orderBy('name').toArray()
+    const accs = await api.list('accounts', 'name')
     setAccounts(accs)
     const balMap: Record<number, number> = {}
     for (const a of accs) {
-      const txs = await db.transactions.where('accountId').equals(a.id!).toArray()
+      const txs = await api.query('transactions', {accountId: a.id!})
       balMap[a.id!] = txs.reduce((s, t) => s + t.amount, 0)
     }
     setBalances(balMap)
@@ -69,17 +69,17 @@ export function Accounts() {
 
   const save = async () => {
     if (!form.name.trim()) return
-    const dup = await db.accounts.where('name').equalsIgnoreCase(form.name.trim()).first()
+    const all = await api.list('accounts')
+    const dup = all.find(a => a.name.toLowerCase() === form.name.trim().toLowerCase())
     if (dup && (!editing || dup.id !== editing.id)) {
       setMessage(`Account "${form.name}" already exists`)
       setTimeout(() => setMessage(''), 3000)
       return
     }
-    const now = new Date()
     if (editing) {
-      await db.accounts.update(editing.id!, { ...form, updatedAt: now })
+      await api.update('accounts', editing.id!, form)
     } else {
-      await db.accounts.add({ ...form, createdAt: now, updatedAt: now } as Account)
+      await api.create('accounts', form)
     }
     setMessage('')
     setModalOpen(false)
@@ -88,8 +88,11 @@ export function Accounts() {
 
   const remove = async (id: number) => {
     if (!confirm('Delete this account and all its transactions?')) return
-    await db.transactions.where('accountId').equals(id).delete()
-    await db.accounts.delete(id)
+    const txs = await api.query('transactions', {accountId: id})
+    for (const tx of txs) {
+      await api.remove('transactions', tx.id!)
+    }
+    await api.remove('accounts', id)
     await load()
   }
 

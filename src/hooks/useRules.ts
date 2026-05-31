@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Rule } from '../types'
 
 export function useRules() {
@@ -7,7 +7,7 @@ export function useRules() {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const data = await db.rules.orderBy('createdAt').toArray()
+    const data = await api.list('rules', 'createdAt')
     setItems(data)
     setLoading(false)
   }, [])
@@ -15,18 +15,18 @@ export function useRules() {
   useEffect(() => { load() }, [load])
 
   const create = async (rule: Omit<Rule, 'id' | 'createdAt'>) => {
-    const id = await db.rules.add({ ...rule, createdAt: new Date() } as Rule)
+    const result = await api.create('rules', rule)
     await load()
-    return id
+    return result
   }
 
   const update = async (id: number, data: Partial<Rule>) => {
-    await db.rules.update(id, data)
+    await api.update('rules', id, data)
     await load()
   }
 
   const remove = async (id: number) => {
-    await db.rules.delete(id)
+    await api.remove('rules', id)
     await load()
   }
 
@@ -34,7 +34,8 @@ export function useRules() {
 }
 
 export async function applyRules(description: string, accountId: number): Promise<number[]> {
-  const rules = await db.rules.filter(r => r.isActive).toArray()
+  const all = await api.list('rules')
+  const rules = all.filter(r => r.isActive)
   const desc = description.toLowerCase()
   const matched = new Set<number>()
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Split } from 'lucide-react'
-import { db } from '../db/db'
-import type { Account, Tag, Transaction, TransactionSplit } from '../types'
+import { api } from '../utils/api'
+import type { Account, Tag } from '../types'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
@@ -33,16 +33,16 @@ export function TransactionForm() {
 
   useEffect(() => {
     (async () => {
-      const allAccs = await db.accounts.toArray()
+      const allAccs = await api.list('accounts')
       const accs = allAccs.filter(a => a.isActive)
       setAccounts(accs)
       if (!prefillAccount && accs.length > 0 && !accountId) setAccountId(String(accs[0].id))
 
-      const tgs = await db.tags.toArray()
+      const tgs = await api.list('tags')
       setTags(tgs)
 
       if (id) {
-        const tx = await db.transactions.get(Number(id))
+        const tx = await api.get('transactions', Number(id))
         if (tx) {
           setDate(tx.date)
           setAmount(String(Math.abs(tx.amount)))
@@ -52,7 +52,7 @@ export function TransactionForm() {
           setAccountId(String(tx.accountId))
           setSelectedTags(tx.tagIds)
 
-          const splitRows = await db.transactionSplits.where('transactionId').equals(tx.id!).toArray()
+          const splitRows = await api.query('transactionSplits', {transactionId: tx.id!})
           if (splitRows.length > 0) {
             setSplitMode(true)
             setSplits(splitRows.map(s => ({ tagId: s.tagId, amount: String(s.amount) })))
@@ -89,7 +89,6 @@ export function TransactionForm() {
     haptic(10)
 
     const signAmount = type === 'expense' ? -numericAmount : numericAmount
-    const now = new Date()
 
     let tagIds = selectedTags
     if (splitMode && splits.length > 0) {
@@ -100,26 +99,28 @@ export function TransactionForm() {
     }
 
     if (isEdit) {
-      await db.transactions.update(Number(id), {
+      await api.update('transactions', Number(id), {
         date, amount: signAmount, description, notes, type,
         accountId: Number(accountId), tagIds,
-        updatedAt: now,
       })
-      await db.transactionSplits.where('transactionId').equals(Number(id)).delete()
+      const existingSplits = await api.query('transactionSplits', {transactionId: Number(id)})
+      for (const s of existingSplits) {
+        await api.remove('transactionSplits', s.id!)
+      }
     } else {
-      const txId = await db.transactions.add({
+      const tx = await api.create('transactions', {
         date, amount: signAmount, description, notes, type,
         accountId: Number(accountId), tagIds,
-        isReconciled: false, createdAt: now, updatedAt: now,
-      } as Transaction)
+        isReconciled: false,
+      })
 
       if (splitMode && splits.some(s => parseFloat(s.amount) > 0)) {
         for (const s of splits) {
           const amt = parseFloat(s.amount) || 0
           if (amt > 0) {
-            await db.transactionSplits.add({
-              transactionId: txId as number, tagId: s.tagId, amount: amt,
-            } as TransactionSplit)
+            await api.create('transactionSplits', {
+              transactionId: tx.id, tagId: s.tagId, amount: amt,
+            })
           }
         }
       }

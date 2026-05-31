@@ -3,8 +3,7 @@ import {
   Download, Upload, Trash2, Settings as SettingsIcon, Moon, Sun,
   FileText, Bell, DollarSign,
 } from 'lucide-react'
-import { db } from '../db/db'
-import type { ExchangeRate } from '../types'
+import { api } from '../utils/api'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -40,25 +39,25 @@ export function Settings() {
 
   useEffect(() => {
     (async () => {
-      const r = await db.exchangeRates.toArray()
+      const r = await api.list('exchangeRates')
       setRates(r)
     })()
   }, [])
 
   const loadAccounts = async () => {
-    const accs = await db.accounts.toArray()
+    const accs = await api.list('accounts')
     setCsvAccounts(accs.map(a => ({ id: a.id!, name: a.name })))
     if (accs.length > 0) setCsvAccountId(String(accs[0].id))
   }
 
   const exportData = async () => {
-    const accounts = await db.accounts.toArray()
-    const transactions = await db.transactions.toArray()
-    const tags = await db.tags.toArray()
-    const budgets = await db.budgets.toArray()
-    const recurringTransactions = await db.recurringTransactions.toArray()
-    const savingGoals = await db.savingGoals.toArray()
-    const rules = await db.rules.toArray()
+    const accounts = await api.list('accounts')
+    const transactions = await api.list('transactions')
+    const tags = await api.list('tags')
+    const budgets = await api.list('budgets')
+    const recurringTransactions = await api.list('recurringTransactions')
+    const savingGoals = await api.list('savingGoals')
+    const rules = await api.list('rules')
     const data = JSON.stringify({ accounts, transactions, tags, budgets, recurringTransactions, savingGoals, rules }, null, 2)
     const blob = new Blob([data], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -72,13 +71,13 @@ export function Settings() {
   const doImport = async () => {
     try {
       const data = JSON.parse(importData)
-      if (data.accounts) for (const a of data.accounts) await db.accounts.put(a)
-      if (data.transactions) for (const t of data.transactions) await db.transactions.put(t)
-      if (data.tags) for (const t of data.tags) await db.tags.put(t)
-      if (data.budgets) for (const b of data.budgets) await db.budgets.put(b)
-      if (data.recurringTransactions) for (const r of data.recurringTransactions) { const { id, ...rest } = r; await db.recurringTransactions.add(rest) }
-      if (data.savingGoals) for (const g of data.savingGoals) { const { id, ...rest } = g; await db.savingGoals.add(rest) }
-      if (data.rules) for (const r of data.rules) { const { id, ...rest } = r; await db.rules.add(rest) }
+      if (data.accounts) for (const { id, ...rest } of data.accounts) await api.create('accounts', rest)
+      if (data.transactions) for (const { id, ...rest } of data.transactions) await api.create('transactions', rest)
+      if (data.tags) for (const { id, ...rest } of data.tags) await api.create('tags', rest)
+      if (data.budgets) for (const { id, ...rest } of data.budgets) await api.create('budgets', rest)
+      if (data.recurringTransactions) for (const { id, ...rest } of data.recurringTransactions) await api.create('recurringTransactions', rest)
+      if (data.savingGoals) for (const { id, ...rest } of data.savingGoals) await api.create('savingGoals', rest)
+      if (data.rules) for (const { id, ...rest } of data.rules) await api.create('rules', rest)
       setMessage('Data imported successfully!')
       setImportModal(false)
     } catch {
@@ -125,7 +124,7 @@ export function Settings() {
       setMessage('Could not detect columns. Need Date + Amount columns.')
       setTimeout(() => setMessage(''), 3000); return
     }
-    let created = 0; const now = new Date()
+    let created = 0
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i]
       if (row.length < 2 || row.every(c => !c)) continue
@@ -144,7 +143,7 @@ export function Settings() {
       else { const debit = debitIdx >= 0 ? parseFloat(row[debitIdx]?.replace(/[^0-9.-]/g, '') || '0') : 0; const credit = creditIdx >= 0 ? parseFloat(row[creditIdx]?.replace(/[^0-9.-]/g, '') || '0') : 0; amount = credit - debit }
       if (!date || !amount) continue
       const description = descIdx >= 0 && descIdx < row.length ? row[descIdx] : ''
-      await db.transactions.add({ accountId: Number(csvAccountId), date, amount, description, type: amount >= 0 ? 'income' as const : 'expense' as const, tagIds: [], notes: '', isReconciled: false, createdAt: now, updatedAt: now })
+      await api.create('transactions', { accountId: Number(csvAccountId), date, amount, description, type: amount >= 0 ? 'income' as const : 'expense' as const, tagIds: [], notes: '', isReconciled: false })
       created++
     }
     setMessage(`Imported ${created} transactions from CSV`); setCsvModal(false)
@@ -154,15 +153,20 @@ export function Settings() {
   const clearAll = async () => {
     if (!confirm('This will delete ALL your data. Are you sure?')) return
     if (!confirm('Really? This cannot be undone!')) return
-    await db.accounts.clear(); await db.transactions.clear(); await db.tags.clear(); await db.budgets.clear()
-    await db.recurringTransactions.clear(); await db.savingGoals.clear(); await db.rules.clear()
+    const allAccounts = await api.list('accounts'); for (const a of allAccounts) await api.remove('accounts', a.id!)
+    const allTransactions = await api.list('transactions'); for (const t of allTransactions) await api.remove('transactions', t.id!)
+    const allTags = await api.list('tags'); for (const t of allTags) await api.remove('tags', t.id!)
+    const allBudgets = await api.list('budgets'); for (const b of allBudgets) await api.remove('budgets', b.id!)
+    const allRecurring = await api.list('recurringTransactions'); for (const r of allRecurring) await api.remove('recurringTransactions', r.id!)
+    const allSavingGoals = await api.list('savingGoals'); for (const g of allSavingGoals) await api.remove('savingGoals', g.id!)
+    const allRules = await api.list('rules'); for (const r of allRules) await api.remove('rules', r.id!)
     setMessage('All data cleared'); setTimeout(() => setMessage(''), 3000)
   }
 
   const generatePDF = async () => {
-    const txs = await db.transactions.orderBy('date').reverse().limit(50).toArray()
-    const accs = await db.accounts.toArray()
-    const tgs = await db.tags.toArray()
+    const txs = await api.list('transactions', 'date', 'desc', 50)
+    const accs = await api.list('accounts')
+    const tgs = await api.list('tags')
     const rows = txs.map(tx => {
       const a = accs.find(a => a.id === tx.accountId)
       const tagNames = tx.tagIds.map(id => tgs.find(t => t.id === id)?.name).filter(Boolean).join(', ')
@@ -179,7 +183,7 @@ export function Settings() {
   const requestNotification = async () => {
     if (typeof Notification === 'undefined') return
     if (notifPerm === 'granted') {
-      const upcoming = await db.recurringTransactions.toArray()
+      const upcoming = await api.list('recurringTransactions')
       const near = upcoming.filter(r => r.isActive).filter(r => {
         const days = (new Date(r.nextDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
         return days >= 0 && days <= 3
@@ -201,21 +205,21 @@ export function Settings() {
 
   const saveRate = async () => {
     if (!rateForm.rate) return
-    await db.exchangeRates.add({
+    await api.create('exchangeRates', {
       fromCurrency: rateForm.fromCurrency,
       toCurrency: rateForm.toCurrency,
       rate: parseFloat(rateForm.rate),
       date: new Date().toISOString().slice(0, 10),
-    } as ExchangeRate)
+    })
     setRateForm({ fromCurrency: 'USD', toCurrency: 'EUR', rate: '' })
     setRateModal(false)
-    const r = await db.exchangeRates.toArray()
+    const r = await api.list('exchangeRates')
     setRates(r)
   }
 
   const deleteRate = async (id: number) => {
-    await db.exchangeRates.delete(id)
-    const r = await db.exchangeRates.toArray()
+    await api.remove('exchangeRates', id)
+    const r = await api.list('exchangeRates')
     setRates(r)
   }
 

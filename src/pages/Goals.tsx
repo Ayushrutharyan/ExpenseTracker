@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, PiggyBank, TrendingUp } from 'lucide-react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { SavingGoal } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -25,7 +25,7 @@ export function GoalsPage() {
   const [fundsAmount, setFundsAmount] = useState('')
 
   const load = async () => {
-    const data = await db.savingGoals.toArray()
+    const data = await api.list('savingGoals')
     setGoals(data)
   }
 
@@ -54,16 +54,15 @@ export function GoalsPage() {
     const target = parseFloat(form.targetAmount)
     const current = parseFloat(form.currentAmount) || 0
     if (editing) {
-      await db.savingGoals.update(editing.id!, {
+      await api.update('savingGoals', editing.id!, {
         name: form.name,
         targetAmount: target,
         currentAmount: current,
         deadline: form.deadline || undefined,
         color: form.color,
-        updatedAt: new Date(),
       })
     } else {
-      await db.savingGoals.add({
+      await api.create('savingGoals', {
         name: form.name,
         targetAmount: target,
         currentAmount: current,
@@ -71,9 +70,7 @@ export function GoalsPage() {
         color: form.color,
         icon: '',
         isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as SavingGoal)
+      })
     }
     setModalOpen(false)
     await load()
@@ -81,7 +78,7 @@ export function GoalsPage() {
 
   const remove = async (id: number) => {
     if (!confirm('Delete this saving goal?')) return
-    await db.savingGoals.delete(id)
+    await api.remove('savingGoals', id)
     await load()
   }
 
@@ -97,9 +94,8 @@ export function GoalsPage() {
     if (!goal) return
     const added = parseFloat(fundsAmount)
     if (isNaN(added) || added <= 0) return
-    await db.savingGoals.update(fundsGoalId, {
+    await api.update('savingGoals', fundsGoalId, {
       currentAmount: goal.currentAmount + added,
-      updatedAt: new Date(),
     })
     setFundsOpen(false)
     await load()

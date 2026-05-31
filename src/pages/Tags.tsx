@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Tags as TagsIcon, ChevronRight, ChevronDown } from 'lucide-react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Tag } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -18,7 +18,7 @@ export function TagsPage() {
   const [form, setForm] = useState({ name: '', color: '#3b82f6', icon: '', parentId: '' })
 
   const load = async () => {
-    const data = await db.tags.orderBy('name').toArray()
+    const data = await api.list('tags', 'name')
     setTags(data)
   }
 
@@ -45,7 +45,8 @@ export function TagsPage() {
 
   const save = async () => {
     if (!form.name.trim()) return
-    const dup = await db.tags.where('name').equalsIgnoreCase(form.name.trim()).first()
+    const all = await api.list('tags')
+    const dup = all.find(t => t.name.toLowerCase() === form.name.trim().toLowerCase())
     if (dup && (!editing || dup.id !== editing.id)) {
       setMessage(`Tag "${form.name}" already exists`)
       setTimeout(() => setMessage(''), 3000)
@@ -55,9 +56,9 @@ export function TagsPage() {
     if (form.parentId) data.parentId = Number(form.parentId)
     else data.parentId = undefined
     if (editing) {
-      await db.tags.update(editing.id!, data)
+      await api.update('tags', editing.id!, data)
     } else {
-      await db.tags.add({ ...data, createdAt: new Date() } as Tag)
+      await api.create('tags', data)
     }
     setMessage('')
     setModalOpen(false)
@@ -68,9 +69,9 @@ export function TagsPage() {
     if (!confirm(`Delete tag "${tags.find(t => t.id === id)?.name}"? Children will become top-level.`)) return
     const children = getChildren(id)
     for (const child of children) {
-      await db.tags.update(child.id!, { parentId: undefined })
+      await api.update('tags', child.id!, { parentId: undefined })
     }
-    await db.tags.delete(id)
+    await api.remove('tags', id)
     await load()
   }
 

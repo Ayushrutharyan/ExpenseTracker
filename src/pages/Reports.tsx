@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, PieChart, TrendingUp, LineChart, Target, AlertTriangle, CheckCircle } from 'lucide-react'
 import { format, subMonths, addMonths } from 'date-fns'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import { Card } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { formatCurrency, currentMonth } from '../utils/format'
@@ -22,16 +22,15 @@ export function Reports() {
 
   useEffect(() => {
     (async () => {
-      const accs = await db.accounts.toArray()
-      const tgs = await db.tags.toArray()
+      const accs = await api.list('accounts')
+      const tgs = await api.list('tags')
 
       const [year, mon] = month.split('-').map(Number)
       const start = `${month}-01`
       const endDate = new Date(year, mon, 0)
       const end = `${month}-${String(endDate.getDate()).padStart(2, '0')}`
 
-      const txs = await db.transactions
-        .where('date').between(start, end, true, true).toArray()
+      const txs = await api.between('transactions', 'date', start, end)
 
       const expenseMap: Record<number, number> = {}
       for (const tag of tgs) { expenseMap[tag.id!] = 0 }
@@ -58,7 +57,7 @@ export function Reports() {
         const s = `${m}-01`
         const ed = new Date(y, mo, 0)
         const e = `${m}-${String(ed.getDate()).padStart(2, '0')}`
-        const tx = await db.transactions.where('date').between(s, e, true, true).toArray()
+        const tx = await api.between('transactions', 'date', s, e)
         trendData.push({
           month: format(d, 'MMM'),
           income: tx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
@@ -75,17 +74,17 @@ export function Reports() {
         const s = `${m}-01`
         const ed = new Date(y, mo, 0)
         const e = `${m}-${String(ed.getDate()).padStart(2, '0')}`
-        const allTx = await db.transactions.where('date').between(s, e, true, true).toArray()
+        const allTx = await api.between('transactions', 'date', s, e)
         const total = allTx.reduce((sum, t) => sum + t.amount, 0)
         nw.push({ month: format(d, 'MMM yy'), value: (nw.length > 0 ? nw[nw.length - 1].value : 0) + total })
       }
       setNetWorth(nw)
 
-      const allRecurring = await db.recurringTransactions.toArray()
+      const allRecurring = await api.list('recurringTransactions')
       const recurring = allRecurring.filter(r => r.isActive)
       let accBalances: Record<number, number> = {}
       for (const a of accs) {
-        const aTxs = await db.transactions.where('accountId').equals(a.id!).toArray()
+        const aTxs = await api.query('transactions', {accountId: a.id!})
         accBalances[a.id!] = aTxs.reduce((s, t) => s + t.amount, 0)
       }
       const totalBalance = Object.values(accBalances).reduce((s, b) => s + b, 0)
@@ -106,7 +105,7 @@ export function Reports() {
       }
       setForecast(fcast)
 
-      const bgs = await db.budgets.where('month').equals(month).toArray()
+      const bgs = await api.query('budgets', {month})
       if (bgs.length > 0) {
         setBudgetVsActual(
           bgs.map(b => {

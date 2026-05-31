@@ -6,15 +6,8 @@ export interface Account {
   icon: string
   color: string
   isActive: boolean
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface TransactionSplit {
-  id?: number
-  transactionId: number
-  tagId: number
-  amount: number
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Transaction {
@@ -29,8 +22,8 @@ export interface Transaction {
   transferId?: number
   isReconciled: boolean
   recurringId?: number
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Tag {
@@ -39,7 +32,7 @@ export interface Tag {
   color: string
   icon: string
   parentId?: number
-  createdAt: Date
+  createdAt: string
 }
 
 export interface Budget {
@@ -47,8 +40,8 @@ export interface Budget {
   tagId: number
   month: string
   amount: number
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
 }
 
 export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly'
@@ -65,8 +58,8 @@ export interface RecurringTransaction {
   nextDate: string
   endDate?: string
   isActive: boolean
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
 }
 
 export interface SavingGoal {
@@ -78,8 +71,8 @@ export interface SavingGoal {
   color: string
   icon: string
   isActive: boolean
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Rule {
@@ -89,7 +82,7 @@ export interface Rule {
   accountId?: number
   description?: string
   isActive: boolean
-  createdAt: Date
+  createdAt: string
 }
 
 export interface ExchangeRate {

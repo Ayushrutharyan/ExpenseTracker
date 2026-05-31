@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ArrowUpRight, ArrowDownLeft, TrendingUp, ArrowRightLeft, PiggyBank, Search, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react'
-import { db } from '../db/db'
+import { api } from '../utils/api'
 import type { Account, Transaction, Tag, Budget } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -30,19 +30,19 @@ export function Dashboard() {
   const loadData = useCallback(async () => {
     await processRecurringTransactions()
 
-    const allAccs = await db.accounts.toArray()
+    const allAccs = await api.list('accounts')
     const accs = allAccs.filter(a => a.isActive)
     setAccounts(accs)
 
-    const allTxs = await db.transactions.orderBy('date').reverse().limit(30).toArray()
+    const allTxs = await api.list('transactions', 'date', 'desc', 30)
     setTransactions(allTxs)
 
-    const tgs = await db.tags.toArray()
+    const tgs = await api.list('tags')
     setTags(tgs)
 
     const balMap: Record<number, number> = {}
     for (const a of accs) {
-      const txs = await db.transactions.where('accountId').equals(a.id!).toArray()
+      const txs = await api.query('transactions', {accountId: a.id!})
       balMap[a.id!] = txs.reduce((s, t) => s + t.amount, 0)
     }
     setBalances(balMap)
@@ -52,14 +52,13 @@ export function Dashboard() {
     const endDate = new Date(year, mon, 0)
     const end = `${month}-${String(endDate.getDate()).padStart(2, '0')}`
 
-    const monthTxs = await db.transactions
-      .where('date').between(start, end, true, true).toArray()
+    const monthTxs = await api.between('transactions', 'date', start, end)
     const inc = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
     const exp = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
     setMonthlyIncome(inc)
     setMonthlyExpense(exp)
 
-    const bgs = await db.budgets.where('month').equals(month).toArray()
+    const bgs = await api.query('budgets', {month})
     const budgetData = bgs.map(b => {
       const tag = tgs.find(t => t.id === b.tagId)
       const spent = monthTxs
