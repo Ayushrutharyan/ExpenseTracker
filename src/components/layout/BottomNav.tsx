@@ -29,7 +29,7 @@ export function BottomNav() {
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-200/60 dark:border-purple-500/10 lg:hidden safe-area-bottom transition-colors">
-        <div className="flex items-center justify-around h-16">
+        <div className="flex items-center h-16 overflow-x-auto scrollbar-none snap-x snap-mandatory">
           {NAV_ITEMS.map(item => (
             <NavLink
               key={item.to}
@@ -37,7 +37,7 @@ export function BottomNav() {
               end={item.to === '/'}
               aria-label={item.label}
               className={({ isActive }) =>
-                `relative flex flex-col items-center gap-0.5 px-3 py-1 text-xs font-medium transition-colors
+                `relative flex flex-col items-center gap-0.5 px-3 py-1 text-xs font-medium transition-colors shrink-0 snap-start
                 ${isActive
                   ? 'text-purple-600 dark:text-purple-400'
                   : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`
@@ -57,7 +57,7 @@ export function BottomNav() {
           <button
             onClick={() => setMoreOpen(true)}
             aria-label="More options"
-            className="relative flex flex-col items-center gap-0.5 px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="relative flex flex-col items-center gap-0.5 px-3 py-1 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0 snap-start"
           >
             <MoreHorizontal size={22} />
             <span>More</span>
