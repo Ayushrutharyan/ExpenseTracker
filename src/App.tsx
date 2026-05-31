@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { lazy, Suspense, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AppShell } from './components/layout/AppShell'
-import { seedDemoData } from './utils/seed'
 import { PageSkeleton } from './components/ui/PageSkeleton'
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })))
@@ -61,7 +60,6 @@ function AnimatedRoutes() {
 export default function App() {
   useEffect(() => {
     localStorage.setItem('defaultCurrency', 'INR')
-    seedDemoData()
   }, [])
 
   return (
