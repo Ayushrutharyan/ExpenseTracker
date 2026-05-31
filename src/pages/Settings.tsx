@@ -32,7 +32,7 @@ export function Settings() {
   const [rateModal, setRateModal] = useState(false)
   const [rateForm, setRateForm] = useState({ fromCurrency: 'USD', toCurrency: 'EUR', rate: '' })
 
-  const [notifPerm, setNotifPerm] = useState(Notification.permission)
+  const [notifPerm, setNotifPerm] = useState(() => typeof Notification !== 'undefined' ? Notification.permission : 'denied')
 
   useEffect(() => {
     localStorage.setItem('defaultCurrency', defaultCurrency)
@@ -177,6 +177,7 @@ export function Settings() {
   }
 
   const requestNotification = async () => {
+    if (typeof Notification === 'undefined') return
     if (notifPerm === 'granted') {
       const upcoming = await db.recurringTransactions.toArray()
       const near = upcoming.filter(r => r.isActive).filter(r => {
