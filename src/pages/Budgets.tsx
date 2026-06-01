@@ -84,10 +84,18 @@ export function Budgets() {
     })
   }
 
+  const inheritedBudget = (tagId: number): Budget | undefined => {
+    const direct = budgets.find(b => b.tagId === tagId)
+    if (direct) return direct
+    const tag = tags.find(t => t.id === tagId)
+    if (tag?.parentId) return inheritedBudget(tag.parentId)
+    return undefined
+  }
+
   const renderBudget = (tag: Tag, depth: number = 0) => {
     const children = getChildren(tag.id!)
     const isExpanded = expanded.has(tag.id!)
-    const budget = budgets.find(b => b.tagId === tag.id!)
+    const budget = inheritedBudget(tag.id!)
     const spent = spending[tag.id!] ?? 0
     const limit = budget?.amount ?? 0
     const percentage = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
