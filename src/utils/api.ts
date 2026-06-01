@@ -2,11 +2,23 @@ import { getSyncKey } from './syncKey'
 
 const API_URL = '/api'
 
+function jsonify(obj: unknown): unknown {
+  if (Array.isArray(obj)) return JSON.stringify(obj)
+  if (obj && typeof obj === 'object') {
+    const result: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      result[k] = jsonify(v)
+    }
+    return result
+  }
+  return obj
+}
+
 async function post(body: Record<string, unknown>) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ syncKey: getSyncKey(), ...body }),
+    body: JSON.stringify({ syncKey: getSyncKey(), ...jsonify(body) }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
