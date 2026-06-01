@@ -95,7 +95,7 @@ export function TransactionForm() {
       tagIds = splits.filter(s => parseFloat(s.amount) > 0).map(s => s.tagId)
     }
     if (!isEdit && tagIds.length === 0) {
-      tagIds = await applyRules(description, Number(accountId))
+      try { tagIds = await applyRules(description, Number(accountId)) } catch { tagIds = [] }
     }
 
     if (isEdit) {

@@ -2,23 +2,22 @@ import { getSyncKey } from './syncKey'
 
 const API_URL = '/api'
 
-function jsonify(obj: unknown): unknown {
-  if (Array.isArray(obj)) return JSON.stringify(obj)
-  if (obj && typeof obj === 'object') {
-    const result: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-      result[k] = jsonify(v)
-    }
-    return result
+function stringifyArrays(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(obj)) {
+    result[k] = Array.isArray(v) ? JSON.stringify(v) : v
   }
-  return obj
+  return result
 }
 
 async function post(body: Record<string, unknown>) {
+  const cooked = { ...body }
+  if (cooked.data) cooked.data = stringifyArrays(cooked.data as Record<string, unknown>)
+  if (cooked.filters) cooked.filters = stringifyArrays(cooked.filters as Record<string, unknown>)
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ syncKey: getSyncKey(), ...jsonify(body) as Record<string, unknown> }),
+    body: JSON.stringify({ syncKey: getSyncKey(), ...cooked }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
