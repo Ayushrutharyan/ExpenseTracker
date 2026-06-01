@@ -54,7 +54,7 @@ export function TagsPage() {
     }
     const data: Partial<Tag> = { name: form.name, color: form.color, icon: form.icon }
     if (form.parentId) data.parentId = Number(form.parentId)
-    else data.parentId = undefined
+    else delete data.parentId
     if (editing) {
       await api.update('tags', editing.id!, data)
     } else {

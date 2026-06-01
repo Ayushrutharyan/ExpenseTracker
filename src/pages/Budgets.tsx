@@ -35,10 +35,18 @@ export function Budgets() {
 
     const txs = await api.between('transactions', 'date', start, end)
 
-    for (const tag of tgs) {
-      spent[tag.id!] = txs
-        .filter(t => t.type === 'expense' && t.tagIds.includes(tag.id!))
+    const childTags = (id: number) => tgs.filter(t => t.parentId === id)
+
+    const calcSpent = (tagId: number): number => {
+      const own = txs
+        .filter(t => t.type === 'expense' && t.tagIds.includes(tagId))
         .reduce((s, t) => s + Math.abs(t.amount), 0)
+      const children = childTags(tagId)
+      return own + children.reduce((s, c) => s + calcSpent(c.id!), 0)
+    }
+
+    for (const tag of tgs) {
+      spent[tag.id!] = calcSpent(tag.id!)
     }
     setSpending(spent)
 

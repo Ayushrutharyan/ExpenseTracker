@@ -59,11 +59,19 @@ export function Dashboard() {
     setMonthlyExpense(exp)
 
     const bgs = await api.query('budgets', {month})
+    const childTags = (id: number) => tgs.filter(t => t.parentId === id)
+
+    const calcSpent = (tagId: number): number => {
+      const own = monthTxs
+        .filter(t => t.type === 'expense' && t.tagIds.includes(tagId))
+        .reduce((s, t) => s + Math.abs(t.amount), 0)
+      const children = childTags(tagId)
+      return own + children.reduce((s, c) => s + calcSpent(c.id!), 0)
+    }
+
     const budgetData = bgs.map(b => {
       const tag = tgs.find(t => t.id === b.tagId)
-      const spent = monthTxs
-        .filter(t => t.type === 'expense' && t.tagIds.includes(b.tagId))
-        .reduce((s, t) => s + Math.abs(t.amount), 0)
+      const spent = calcSpent(b.tagId)
       return { ...b, spent, tag }
     })
     setBudgets(budgetData)
