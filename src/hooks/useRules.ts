@@ -14,13 +14,13 @@ export function useRules() {
 
   useEffect(() => { load() }, [load])
 
-  const create = async (rule: Omit<Rule, 'id' | 'createdAt'>) => {
+  const create = async (rule: Record<string, unknown>) => {
     const result = await api.create('rules', rule)
     await load()
     return result
   }
 
-  const update = async (id: number, data: Partial<Rule>) => {
+  const update = async (id: number, data: Record<string, unknown>) => {
     await api.update('rules', id, data)
     await load()
   }
