@@ -18,7 +18,7 @@ async function post(body: Record<string, unknown>) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ syncKey: getSyncKey(), ...jsonify(body) }),
+    body: JSON.stringify({ syncKey: getSyncKey(), ...jsonify(body) as Record<string, unknown> }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
