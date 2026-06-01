@@ -56,8 +56,12 @@ function convertRow(row: Record<string, unknown>): Record<string, unknown> {
   if (typeof r.isActive === 'number') r.isActive = !!r.isActive
   if (typeof r.isReconciled === 'number') r.isReconciled = !!r.isReconciled
   if (typeof r.tagIds === 'string') {
-    try { r.tagIds = JSON.parse(r.tagIds as string) } catch { r.tagIds = [] }
+    try {
+      const parsed = JSON.parse(r.tagIds as string)
+      r.tagIds = Array.isArray(parsed) ? parsed : []
+    } catch { r.tagIds = [] }
   }
+  if (!Array.isArray(r.tagIds)) r.tagIds = []
   return r
 }
 

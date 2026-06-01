@@ -39,13 +39,14 @@ export async function applyRules(description: string, accountId: number): Promis
   const desc = description.toLowerCase()
   const matched = new Set<number>()
 
-  for (const rule of rules) {
-    if (!desc.includes(rule.pattern.toLowerCase())) continue
-    if (rule.accountId !== undefined && rule.accountId !== accountId) continue
-    for (const tagId of rule.tagIds) {
-      matched.add(tagId)
+    for (const rule of rules) {
+      if (!desc.includes(rule.pattern.toLowerCase())) continue
+      if (rule.accountId !== undefined && rule.accountId !== accountId) continue
+      if (!Array.isArray(rule.tagIds)) continue
+      for (const tagId of rule.tagIds) {
+        matched.add(tagId)
+      }
     }
-  }
 
   return Array.from(matched)
 }
