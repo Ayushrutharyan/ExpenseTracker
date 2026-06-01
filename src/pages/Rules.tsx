@@ -49,13 +49,13 @@ export function RulesPage() {
 
   const save = async () => {
     if (!form.pattern.trim()) return
-    const data = {
+    const data: Record<string, unknown> = {
       pattern: form.pattern,
-      description: form.description || undefined,
-      accountId: form.accountId ? Number(form.accountId) : undefined,
       tagIds: form.tagIds,
       isActive: form.isActive,
     }
+    if (form.description) data.description = form.description
+    if (form.accountId) data.accountId = Number(form.accountId)
     if (editing) {
       await update(editing.id!, data)
     } else {
