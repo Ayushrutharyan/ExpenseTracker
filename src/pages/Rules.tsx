@@ -50,7 +50,7 @@ export function RulesPage() {
   const save = async () => {
     if (!form.pattern.trim()) return
     const data: Record<string, unknown> = {
-      pattern: form.pattern,
+      pattern: form.pattern.trim(),
       tagIds: form.tagIds,
       isActive: form.isActive,
     }
